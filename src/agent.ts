@@ -71,6 +71,7 @@ cli.runApp(
   new WorkerOptions({
     agent: fileURLToPath(import.meta.url),
     host: '0.0.0.0',
+    port: 8080,
     initializeProcessTimeout: 50000,
   }),
 );
