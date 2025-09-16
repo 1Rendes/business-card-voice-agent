@@ -24,7 +24,8 @@ export default defineAgent({
     );
 
     const model = new openai.realtime.RealtimeModel({
-      instructions: 'Your are a helpful assistant',
+      instructions:
+        "Your are a helpful assistant to retrieve information about Volodymyr's experience and projects",
     });
     const fncCtx: llm.FunctionContext = {
       ...retrieverTool,
@@ -51,6 +52,19 @@ export default defineAgent({
         { upsert: true },
       );
     };
+    const metadata = JSON.parse(participant.info.metadata || '{}');
+    const language = (() => {
+      switch (metadata.language) {
+        case 'ua':
+          return 'Ukrainian';
+        case 'en':
+          return 'English';
+        case 'de':
+          return 'German';
+        default:
+          return 'English';
+      }
+    })();
     session.addListener('input_speech_transcription_completed', async (data) => {
       addMessagesToDb({ type: 'outgoing', content: data.transcript });
     });
@@ -59,8 +73,8 @@ export default defineAgent({
     });
     session.conversation.item.create(
       llm.ChatMessage.create({
-        role: llm.ChatRole.ASSISTANT,
-        text: 'How can i assist you today?',
+        role: llm.ChatRole.SYSTEM,
+        text: `Say 'hi' or 'hello' and shortly answer what is you main task as provided in your instructions. User's language is ${language || 'English'}`,
       }),
     );
     session.response.create();

@@ -22,7 +22,7 @@ async function createEmbeddings(input: string | string[]) {
 export const retrieverTool = {
   retrieveInformationFromDocuments: {
     description:
-      "retrieve different information in database for additional context. If you perform this function, say 'Let me check the information' before in conversation's language.",
+      "retrieve information about Volodymyr's projects and experience. If you perform this function, say 'Let me check the information' before in conversation's language.",
     parameters: z.object({
       query: z.string().describe('user query to search in database'),
     }),
@@ -33,9 +33,11 @@ export const retrieverTool = {
       const queryVectors = embeddenQuery.data[0].embedding;
       try {
         const result = await index.query({ topK: 3, vector: queryVectors, includeMetadata: true });
-        console.log('result: ', result.matches[0].metadata);
-        const response = result.matches[0].metadata;
-        if (response) return response.text as string;
+        // console.log('result: ', result.matches[0].metadata);
+        const response = result.matches.map((result) => result.metadata);
+        console.log('response: ', response);
+
+        if (response) return String(response);
       } catch (error) {
         console.log('error: ', error);
       }
