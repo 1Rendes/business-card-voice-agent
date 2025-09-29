@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
 import { initMongoConnection } from './db/initMongo.js';
 import { retrieverTool } from './tools/retrieverTool.js';
+import { systemInstructions } from './context/systemInstructions.js';
 
 dotenv.config();
 
@@ -74,8 +75,8 @@ export default defineAgent({
     session.conversation.item.create(
       llm.ChatMessage.create({
         role: llm.ChatRole.SYSTEM,
-        text: `Say 'hi' or 'hello' and shortly answer what is you main task as provided in your instructions. User's language is ${language || 'English'}`,
-      }),
+        text: `${systemInstructions}. User's language is ${language || 'English'}`,
+      })
     );
     session.response.create();
   },
