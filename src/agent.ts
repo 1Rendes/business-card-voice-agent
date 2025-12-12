@@ -25,6 +25,7 @@ export default defineAgent({
     );
 
     const model = new openai.realtime.RealtimeModel({
+      model: 'gpt-4o-realtime-preview',
       instructions:
         "Your are a helpful assistant to retrieve information about Volodymyr's experience and projects",
     });
