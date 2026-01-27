@@ -32,12 +32,17 @@ export const retrieverTool = {
 
       const queryVectors = embeddenQuery.data[0].embedding;
       try {
-        const result = await index.query({ topK: 3, vector: queryVectors, includeMetadata: true });
-        // console.log('result: ', result.matches[0].metadata);
+        const result = await index.query({ topK: 5, vector: queryVectors, includeMetadata: true });
         const response = result.matches.map((result) => result.metadata);
-        console.log('response: ', response);
-
-        if (response) return String(response);
+        if (response) {
+          const textContent = response
+          .filter((item): item is NonNullable<typeof item> => item != null)
+          .map((item) => item.text || '')
+          .filter(Boolean)
+          .join('\n\n');
+          console.log('textContent: ', textContent);
+          return textContent || 'No relevant information found.';
+        }
       } catch (error) {
         console.log('error: ', error);
       }
