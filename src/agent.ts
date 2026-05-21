@@ -1,4 +1,4 @@
-import { type JobContext, WorkerOptions, cli, defineAgent, llm, multimodal } from '@livekit/agents';
+import { type JobContext, ServerOptions, cli, defineAgent, voice } from '@livekit/agents';
 import * as openai from '@livekit/agents-plugin-openai';
 import dotenv from 'dotenv';
 import type { PushOperator } from 'mongodb';
@@ -18,76 +18,63 @@ export default defineAgent({
     const voiceChatMessages = db.collection('voiceChatMessages');
 
     await ctx.connect();
-    console.log('waiting for participant');
     const participant = await ctx.waitForParticipant();
     console.log(
-      `starting assistant example agent for ${participant.identity} to room ${ctx.room.name}`,
+      `starting assistant for ${participant.identity} in room ${ctx.room.name}`,
     );
 
-    const model = new openai.realtime.RealtimeModel({
-      model: 'gpt-4o-realtime-preview',
-      instructions:
-        "Your are a helpful assistant to retrieve information about Volodymyr's experience and projects",
-    });
-    const fncCtx: llm.FunctionContext = {
-      ...retrieverTool,
-    };
-    const agent = new multimodal.MultimodalAgent({ model, fncCtx });
-    const sessionAndChatData = await agent.start(ctx.room, participant).then((session) => {
-      const chatId = uuidv4();
-      const threadId = { userId: participant.identity, chatId };
-      return { threadId, session: session as openai.realtime.RealtimeSession };
-    });
-    const session = sessionAndChatData.session;
-    const threadId = sessionAndChatData.threadId;
+    const metadata = JSON.parse(participant.info.metadata || '{}');
+    const language = (() => {
+      switch (metadata.language) {
+        case 'ua': return 'Ukrainian';
+        case 'en': return 'English';
+        case 'de': return 'German';
+        default: return 'English';
+      }
+    })();
+
+    const chatId = uuidv4();
+    const threadId = { userId: participant.identity, chatId };
+
     const addMessagesToDb = async ({ type, content }: { type: string; content: string }) => {
       await voiceChatMessages.updateOne(
         { 'thread_id.userId': threadId.userId, 'thread_id.chatId': threadId.chatId },
         {
-          $push: {
-            messages: {
-              type,
-              content,
-            },
-          } as PushOperator<Document>,
+          $push: { messages: { type, content } } as PushOperator<Document>,
         },
         { upsert: true },
       );
     };
-    const metadata = JSON.parse(participant.info.metadata || '{}');
-    const language = (() => {
-      switch (metadata.language) {
-        case 'ua':
-          return 'Ukrainian';
-        case 'en':
-          return 'English';
-        case 'de':
-          return 'German';
-        default:
-          return 'English';
+
+    const agent = new voice.Agent({
+      instructions: `${systemInstructions}. User's language is ${language || 'English'}`,
+      tools: { retrieveInformationFromDocuments: retrieverTool },
+    });
+
+    const session = new voice.AgentSession({
+      llm: new openai.realtime.RealtimeModel({
+        model: 'gpt-realtime-1.5',
+      }),
+    });
+
+    await session.start({ agent, room: ctx.room });
+
+    session.on(voice.AgentSessionEventTypes.UserInputTranscribed, async (ev) => {
+      if (ev.isFinal) {
+        await addMessagesToDb({ type: 'outgoing', content: ev.transcript });
       }
-    })();
-    session.addListener('input_speech_transcription_completed', async (data) => {
-      addMessagesToDb({ type: 'outgoing', content: data.transcript });
     });
-    session.addListener('response_content_done', async (data) => {
-      addMessagesToDb({ type: 'incoming', content: data.text });
+
+    session.on(voice.AgentSessionEventTypes.ConversationItemAdded, async (ev) => {
+      const item = ev.item;
+      if ('role' in item && item.role === 'assistant' && 'textContent' in item) {
+        const text = item.textContent;
+        if (text) {
+          await addMessagesToDb({ type: 'incoming', content: text });
+        }
+      }
     });
-    session.conversation.item.create(
-      llm.ChatMessage.create({
-        role: llm.ChatRole.SYSTEM,
-        text: `${systemInstructions}. User's language is ${language || 'English'}`,
-      })
-    );
-    session.response.create();
   },
 });
 
-cli.runApp(
-  new WorkerOptions({
-    agent: fileURLToPath(import.meta.url),
-    host: '0.0.0.0',
-    port: 8080,
-    initializeProcessTimeout: 50000,
-  }),
-);
+cli.runApp(new ServerOptions({ agent: fileURLToPath(import.meta.url) }));

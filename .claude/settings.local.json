@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm show *)",
+      "Bash(python -c \"import sys,json; v=json.load\\(sys.stdin\\); print\\(v[-5:]\\)\")",
+      "Bash(npx patch-package *)",
+      "WebSearch",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:openai.com)",
+      "WebFetch(domain:developers.openai.com)",
+      "WebFetch(domain:voximplant.com)",
+      "WebFetch(domain:docs.livekit.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('deps:', json.dumps\\(d.get\\('dependencies',{}\\), indent=2\\)\\); print\\('peers:', json.dumps\\(d.get\\('peerDependencies',{}\\), indent=2\\)\\)\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\); console.log\\('deps:', JSON.stringify\\(d.dependencies||{}, null, 2\\)\\); console.log\\('peers:', JSON.stringify\\(d.peerDependencies||{}, null, 2\\)\\);\")",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(npm install *)",
+      "Bash(rm -rf patches)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}
