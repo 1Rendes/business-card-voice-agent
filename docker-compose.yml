@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  livekit-agent:
+    build: .
+    container_name: livekit-agent
+    # network_mode: host  <-- Закомментируйте или удалите эту строку на Mac/Windows
+
+    # Пробрасываем конкретный порт наружу
+    ports:
+      - "65107:65107"
+
+    # Передаем секреты и ключи LiveKit через переменные окружения
+    environment:
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - NODE_ENV=production
